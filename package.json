@@ -1,0 +1,11 @@
+{
+  "name": "wings-cafe-inventory",
+  "version": "1.0.0",
+  "description": "Stock inventory system for Wings Cafe",
+  "scripts": {
+    "build": "cd frontend && npm install && npm run build"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
