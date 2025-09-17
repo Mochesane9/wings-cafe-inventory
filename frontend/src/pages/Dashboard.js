@@ -5,7 +5,7 @@ const Dashboard = () => {
   const [products, setProducts] = useState([]);
 
   useEffect(() => {
-    axios.get('https://http://localhost:5000/products')
+    axios.get('https://wings-cafe-inventory-747n.onrender.com/products')
       .then(res => setProducts(res.data))
       .catch(err => console.error(err));
   }, []);
@@ -19,12 +19,19 @@ const Dashboard = () => {
       <h2>Stock Overview</h2>
       <table>
         <thead>
-          <tr><th>Name</th><th>Quantity</th><th>Value (M)</th><th>Status</th></tr>
+          <tr>
+            <th>Name</th>
+            <th>Quantity</th>
+            <th>Value (M)</th>
+            <th>Status</th>
+          </tr>
         </thead>
         <tbody>
           {products.map(p => (
             <tr key={p.id}>
-              <td>{p.name}</td><td>{p.quantity}</td><td>M {(p.price * p.quantity).toFixed(2)}</td>
+              <td>{p.name}</td>
+              <td>{p.quantity}</td>
+              <td>M {(p.price * p.quantity).toFixed(2)}</td>
               <td>{p.quantity < 5 ? <span className="low-stock">Low Stock Alert!</span> : 'OK'}</td>
             </tr>
           ))}
