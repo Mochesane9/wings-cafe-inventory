@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 
+const API_BASE = "https://wings-cafe-inventory-747n.onrender.com";
+
 const Inventory = () => {
   const [products, setProducts] = useState([]);
   const [formData, setFormData] = useState({ name: '', description: '', category: '', price: 0, quantity: 0 });
@@ -13,7 +15,7 @@ const Inventory = () => {
   }, []);
 
   const fetchProducts = () => {
-    axios.get('http://localhost:5000/products')
+    axios.get(`${API_BASE}/products`)
       .then(res => setProducts(res.data))
       .catch(err => setError('Failed to load products. Check backend connection.'));
   };
@@ -26,7 +28,7 @@ const Inventory = () => {
     e.preventDefault();
     const payload = { ...formData, price: parseFloat(formData.price), quantity: parseInt(formData.quantity) };
     if (editId) {
-      axios.put(`http://localhost:5000/products/${editId}`, payload)
+      axios.put(`${API_BASE}/products/${editId}`, payload)
         .then(() => {
           fetchProducts();
           resetForm();
@@ -34,7 +36,7 @@ const Inventory = () => {
         })
         .catch(err => setError(`Error updating product: ${err.response?.data?.error || err.message}`));
     } else {
-      axios.post('http://localhost:5000/products', payload)
+      axios.post(`${API_BASE}/products`, payload)
         .then(() => {
           fetchProducts();
           resetForm();
@@ -50,7 +52,7 @@ const Inventory = () => {
   };
 
   const handleDelete = (id) => {
-    axios.delete(`http://localhost:5000/products/${id}`)
+    axios.delete(`${API_BASE}/products/${id}`)
       .then(() => fetchProducts())
       .catch(err => setError(`Error deleting product: ${err.response?.data?.error || err.message}`));
   };
@@ -66,7 +68,7 @@ const Inventory = () => {
 
   const handleAddStock = (e) => {
     e.preventDefault();
-    axios.post('http://localhost:5000/transactions', { productId: parseInt(addStockData.productId), type: 'add', quantity: parseInt(addStockData.quantity) })
+    axios.post(`${API_BASE}/transactions`, { productId: parseInt(addStockData.productId), type: 'add', quantity: parseInt(addStockData.quantity) })
       .then(() => {
         fetchProducts();
         setAddStockData({ productId: '', quantity: 0 });
