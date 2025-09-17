@@ -5,7 +5,7 @@ const Dashboard = () => {
   const [products, setProducts] = useState([]);
 
   useEffect(() => {
-    axios.get('https://wings-cafe-inventory-747n.onrender.com/products')
+    axios.get('https://http://localhost:5000/products')
       .then(res => setProducts(res.data))
       .catch(err => console.error(err));
   }, []);
