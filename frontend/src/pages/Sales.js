@@ -1,98 +1,73 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 
-const API_BASE = process.env.REACT_APP_API_BASE || "https://wings-cafe-inventory-747n.onrender.com";
+const API_BASE = "https://wings-cafe-inventory-747n.onrender.com";
 
 const Sales = () => {
   const [products, setProducts] = useState([]);
   const [sales, setSales] = useState([]);
-  const [saleData, setSaleData] = useState({ productId: "", quantity: "" });
+  const [saleData, setSaleData] = useState({ productId: "", quantity: 0 });
   const [total, setTotal] = useState(0);
   const [error, setError] = useState("");
 
+  // Load products
   useEffect(() => {
-    fetchData();
+    axios
+      .get(`${API_BASE}/products`)
+      .then((res) => setProducts(res.data))
+      .catch(() => setError("Failed to load products."));
   }, []);
 
-  const fetchData = async () => {
-    setError("");
-    try {
-      const [pRes, tRes] = await Promise.all([
-        axios.get(`${API_BASE}/products`),
-        axios.get(`${API_BASE}/transactions`)
-      ]);
-
-      // Load products
-      const products = Array.isArray(pRes.data) ? pRes.data : [];
-      setProducts(products);
-
-      // Load ONLY sales transactions (ignore stock additions)
-      const txRaw = Array.isArray(tRes.data) ? tRes.data : [];
-      const salesOnly = txRaw.filter(tx => tx.type === "sell");
-      setSales(salesOnly);
-    } catch (err) {
-      console.error("Error fetching data:", err);
-      setError("Failed to load products or sales.");
-    }
-  };
-
-  const findProduct = (id) => products.find(p => String(p.id) === String(id));
-  const formatMoney = (n) => Number(n || 0).toFixed(2);
+  // Load sales
+  useEffect(() => {
+    axios
+      .get(`${API_BASE}/transactions`)
+      .then((res) => setSales(res.data))
+      .catch(() => setError("Failed to load sales."));
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    const updated = { ...saleData, [name]: value };
-    setSaleData(updated);
+    const updatedData = { ...saleData, [name]: value };
+    setSaleData(updatedData);
 
-    if (name === "quantity" || name === "productId") {
-      const product = findProduct(updated.productId);
-      const qty = parseInt(updated.quantity, 10) || 0;
-      setTotal(product ? product.price * qty : 0);
-    }
+    const product = products.find((p) => p.id === updatedData.productId);
+    setTotal(product ? product.price * (parseInt(updatedData.quantity) || 0) : 0);
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    setError("");
-
-    const { productId, quantity } = saleData;
-    const qty = parseInt(quantity, 10);
-
-    if (!productId || !qty || qty <= 0) {
+    if (!saleData.productId || saleData.quantity <= 0) {
       setError("Please select a product and enter a valid quantity.");
       return;
     }
 
-    const product = findProduct(productId);
-    if (!product) {
-      setError("Product not found.");
-      return;
-    }
-
-    if (product.quantity < qty) {
-      setError(`Not enough stock. Available: ${product.quantity}`);
-      return;
-    }
-
-    try {
-      await axios.post(`${API_BASE}/transactions`, {
-        productId: product.id,
+    axios
+      .post(`${API_BASE}/transactions`, {
+        productId: saleData.productId,
         type: "sell",
-        quantity: qty,
-      });
+        quantity: saleData.quantity,
+      })
+      .then((res) => {
+        setSales([res.data, ...sales]); // Add new sale on top
+        setSaleData({ productId: "", quantity: 0 });
+        setTotal(0);
+        setError("");
 
-      setSaleData({ productId: "", quantity: "" });
-      setTotal(0);
-      await fetchData();
-    } catch (err) {
-      console.error("Error recording sale:", err);
-      setError("Error recording sale.");
-    }
+        // Refresh products after sale
+        axios.get(`${API_BASE}/products`).then((res) => setProducts(res.data));
+      })
+      .catch((err) =>
+        setError(err.response?.data?.error || "Error recording sale.")
+      );
   };
 
-  // Sort sales by newest first
-  const sortedSales = [...sales].sort((a, b) =>
-    new Date(b.createdAt) - new Date(a.createdAt)
+  const findProduct = (id) => products.find((p) => p.id === id);
+
+  const formatMoney = (value) => Number(value).toFixed(2);
+
+  const sortedSales = [...sales].sort(
+    (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
   );
 
   return (
@@ -100,42 +75,39 @@ const Sales = () => {
       <h1>Sales Management</h1>
       {error && <p style={{ color: "red" }}>{error}</p>}
 
-      <form onSubmit={handleSubmit} style={{ marginBottom: 20 }}>
-        <label>
-          Product:
-          <select
-            name="productId"
-            value={saleData.productId}
-            onChange={handleChange}
-            required
-          >
-            <option value="">Select Product</option>
-            {products.map(p => (
-              <option key={p.id} value={p.id}>
-                {p.name} (Qty: {p.quantity}, M{formatMoney(p.price)})
-              </option>
-            ))}
-          </select>
-        </label>
+      <form onSubmit={handleSubmit} className="sales-form">
+        <label>Product:</label>
+        <select
+          name="productId"
+          value={saleData.productId}
+          onChange={handleChange}
+          required
+        >
+          <option value="">Select Product</option>
+          {products.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name} (Qty: {p.quantity}, M{p.price})
+            </option>
+          ))}
+        </select>
 
-        <label>
-          Quantity:
-          <input
-            type="number"
-            name="quantity"
-            min="1"
-            value={saleData.quantity}
-            onChange={handleChange}
-            required
-          />
-        </label>
+        <label>Quantity:</label>
+        <input
+          name="quantity"
+          type="number"
+          placeholder="Quantity to Sell"
+          value={saleData.quantity}
+          onChange={handleChange}
+          min="1"
+          required
+        />
 
-        <p>Total: M{formatMoney(total)}</p>
+        <p>Total: M {formatMoney(total)}</p>
         <button type="submit">Record Sale</button>
       </form>
 
       <h2>Recent Sales</h2>
-      <table border="1" width="100%">
+      <table className="sales-table">
         <thead>
           <tr>
             <th>Product</th>
@@ -157,7 +129,11 @@ const Sales = () => {
                   <td>{product.name || "Unknown"}</td>
                   <td>{s.quantity}</td>
                   <td>M{formatMoney((product.price || 0) * s.quantity)}</td>
-                  <td>{s.createdAt ? new Date(s.createdAt).toLocaleString() : ""}</td>
+                  <td>
+                    {s.createdAt
+                      ? new Date(s.createdAt).toLocaleString()
+                      : "N/A"}
+                  </td>
                 </tr>
               );
             })
