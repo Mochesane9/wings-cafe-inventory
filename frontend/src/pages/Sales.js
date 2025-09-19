@@ -49,7 +49,13 @@ const Sales = () => {
         quantity: saleData.quantity,
       })
       .then((res) => {
-        setSales([res.data, ...sales]); // Add new sale on top
+        // If backend doesn’t send date, add it manually
+        const newSale = {
+          ...res.data,
+          createdAt: res.data.createdAt || new Date().toISOString(),
+        };
+
+        setSales([newSale, ...sales]); // Add new sale to top
         setSaleData({ productId: "", quantity: 0 });
         setTotal(0);
         setError("");
@@ -129,11 +135,7 @@ const Sales = () => {
                   <td>{product.name || "Unknown"}</td>
                   <td>{s.quantity}</td>
                   <td>M{formatMoney((product.price || 0) * s.quantity)}</td>
-                  <td>
-                    {s.createdAt
-                      ? new Date(s.createdAt).toLocaleString()
-                      : "N/A"}
-                  </td>
+                  <td>{new Date(s.createdAt).toLocaleString()}</td>
                 </tr>
               );
             })
